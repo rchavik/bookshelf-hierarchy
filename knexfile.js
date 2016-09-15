@@ -10,7 +10,6 @@ module.exports = {
       password: 'password',
       timezone: 'UTC'
     },
-    debug: true,
     migrations: {
       directory: './migrations',
       tableName: 'migrations',

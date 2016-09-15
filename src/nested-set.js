@@ -96,7 +96,6 @@ module.exports = function nestedSetPlugin(bookshelf) {
     })
     .fetch()
     .then(node => {
-      console.log("IN FETCH NODE");
       if (!node) {
         throw new Error('Invalid node id:', model[modelPrototype.idAttribute]);
       }

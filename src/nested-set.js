@@ -14,13 +14,22 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let modelPrototype = bookshelf.Model.prototype;
 
   let onCreating = function(model, attrs, options) {
+    var self = this;
+    return bookshelf.transaction(transaction => {
+      return _onCreating.call(self, transaction, model, attrs, options)
+    });
+  };
+
+  let _onCreating = function(transaction, model, attrs, options) {
 
     if (attrs.parent_id) {
 
       return this.constructor.forge({
           [modelPrototype.idAttribute]: attrs.parent_id
         })
-        .fetch()
+        .fetch({
+          transacting: transaction
+        })
         .then(parent => {
           if (parent) {
             let edge = parent.get(fieldRight);
@@ -32,6 +41,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
               }, {
                 method: 'update',
                 require: false,
+                transacting: transaction,
               })
               .then(q => {
                 //console.log('q', q);
@@ -46,6 +56,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
               }, {
                 method: 'update',
                 require: false,
+                transacting: transaction,
               })
               .then(q => {
                 //console.log('q', q);
@@ -71,7 +82,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
           .orderBy(fieldRight, 'desc')
           .limit(1);
         })
-        .fetch()
+        .fetch({
+          transacting: transaction,
+        })
         .then(parent => {
           if (parent) {
             attrs[fieldLeft] = parent[fieldRight] + 1;
@@ -86,6 +99,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
   };
 
   let removeFromTree = function(model, options) {
+    let transaction = options ? options.transacting : null;
 
     if (! model[modelPrototype.idAttribute]) {
       return;
@@ -94,7 +108,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
     let fetchNode = this.constructor.forge({
       [modelPrototype.idAttribute]: model[modelPrototype.idAttribute],
     })
-    .fetch()
+    .fetch({
+      transacting: transaction
+    })
     .then(node => {
       if (!node) {
         throw new Error('Invalid node id:', model[modelPrototype.idAttribute]);
@@ -113,6 +129,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
         }, {
           method: 'update',
           require: false,
+          transacting: transaction,
         })
         .then(q => {
           //console.log('q', q);
@@ -128,6 +145,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
         }, {
           method: 'update',
           require: false,
+          transacting: transaction,
         })
         .then(q => {
           //console.log('q', q);
@@ -139,7 +157,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
       let deletePromise = this.query(qb => {
           qb.whereRaw([fieldLeft, 'between', myLeft, 'and', myRight,].join(' '))
         })
-        .destroy()
+        .destroy({
+          transacting: transaction,
+        })
         .then(() => {
         }).catch(e => {
           console.log('ERROR', e);

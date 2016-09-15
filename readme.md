@@ -6,7 +6,7 @@
 
 # Todo
 
-- [ ] transaction support
+- [x] transaction support
 - [ ] findPath
 - [ ] findChildren
 - [ ] findTreeList

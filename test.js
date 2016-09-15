@@ -12,6 +12,15 @@ var Category = ORM.Model.extend({
   tableName: 'nested_category',
 });
 
-new Category().save({name: '3D TV', parent_id: 2}).then(c => {
-  new Category().removeFromTree({id: 8});
+ORM.transaction(t => {
+  new Category().save({name: '3D TV', parent_id: 2}, {transacting: t})
+  .then(category => {
+    new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
+      t.commit();
+    });
+  });
+}).then(() => {
+  console.log('transaction commited');
+}).catch(() => {
+  console.log('transaction error');
 });

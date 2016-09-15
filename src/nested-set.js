@@ -171,13 +171,14 @@ module.exports = function nestedSetPlugin(bookshelf) {
     return Promise.resolve(fetchNode)
   };
 
+  modelPrototype.on('creating', onCreating);
+
   bookshelf.Model = bookshelf.Model.extend({
 
     constructor: function() {
 
       modelPrototype.constructor.apply(this, arguments)
 
-      modelPrototype.on('creating', onCreating.bind(this));
     },
 
     removeFromTree: removeFromTree,

@@ -5,11 +5,13 @@ module.exports = function nestedSetPlugin(bookshelf) {
     fields: {
       left: 'lft',
       right: 'rgt',
+      parentId: 'parent_id',
     }
   };
 
   const fieldLeft = config.fields.left;
   const fieldRight = config.fields.right;
+  const fieldParent = config.fields.parentId;
 
   let modelPrototype = bookshelf.Model.prototype;
 
@@ -22,10 +24,10 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   let _onCreating = function(transaction, model, attrs, options) {
 
-    if (attrs.parent_id) {
+    if (attrs[fieldParent]) {
 
       return this.constructor.forge({
-          [modelPrototype.idAttribute]: attrs.parent_id
+          [modelPrototype.idAttribute]: attrs[fieldParent]
         })
         .fetch({
           transacting: transaction
@@ -171,7 +173,36 @@ module.exports = function nestedSetPlugin(bookshelf) {
     return Promise.resolve(fetchNode)
   };
 
+  let onFetching = function(model, columns, options) {
+
+    if (! options.findChildren) {
+      return;
+    }
+
+    if (! options.findChildren.for) {
+      throw new Error('The \'for\' key is required for \'findChildren\'');
+    }
+
+    options.query.orderBy(fieldLeft, 'asc');
+
+    if (options.findChildren.direct) {
+      return options.query.where(fieldParent, '=', options.findChildren.for)
+    }
+
+    return this.constructor.forge({
+      [modelPrototype.idAttribute]: options.findChildren.for,
+    }).fetch({
+      transacting: options.transacting,
+    }).then(node => {
+      options.query
+        .andWhere(fieldRight, '<', node.get(fieldRight))
+        .andWhere(fieldLeft, '>', node.get(fieldLeft))
+    });
+  }
+
   modelPrototype.on('creating', onCreating);
+  modelPrototype.on('fetching', onFetching);
+  modelPrototype.on('fetching:collection', onFetching);
 
   bookshelf.Model = bookshelf.Model.extend({
 

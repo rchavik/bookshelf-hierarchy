@@ -24,3 +24,15 @@ ORM.transaction(t => {
 }).catch(() => {
   console.log('transaction error');
 });
+
+Category.forge().fetchAll({
+  findChildren: {
+    for: 6,
+    direct: false,
+  }
+})
+.then(results => {
+  console.log(results.toJSON());
+}).catch(err => {
+  console.log(err);
+});

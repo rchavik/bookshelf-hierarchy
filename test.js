@@ -12,4 +12,6 @@ var Category = ORM.Model.extend({
   tableName: 'nested_category',
 });
 
-new Category().save({name: '3D TV', parent_id: 2});
+new Category().save({name: '3D TV', parent_id: 2}).then(c => {
+  new Category().removeFromTree({id: 8});
+});

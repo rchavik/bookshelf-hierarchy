@@ -21,7 +21,7 @@ VALUES
 (9,'CD PLAYERS',15,16),
 (10,'2 WAY RADIOS',17,18);
 
-SELECT node.id, CONCAT( REPEAT(' ', COUNT(parent.name) - 1), node.name) AS name
+SELECT node.id, CONCAT( REPEAT('  ', COUNT(parent.name) - 1), node.name) AS name
   FROM nested_category AS node,
        nested_category AS parent
  WHERE node.lft BETWEEN parent.lft AND parent.rgt

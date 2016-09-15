@@ -85,6 +85,73 @@ module.exports = function nestedSetPlugin(bookshelf) {
     }
   };
 
+  let removeFromTree = function(model, options) {
+
+    if (! model[modelPrototype.idAttribute]) {
+      return;
+    }
+
+    let fetchNode = this.constructor.forge({
+      [modelPrototype.idAttribute]: model[modelPrototype.idAttribute],
+    })
+    .fetch()
+    .then(node => {
+      console.log("IN FETCH NODE");
+      if (!node) {
+        throw new Error('Invalid node id:', model[modelPrototype.idAttribute]);
+      }
+
+      let myLeft = parseInt(node.get(fieldLeft), 10);
+      let myRight = parseInt(node.get(fieldRight), 10);
+      let myWidth = myRight - myLeft + 1;
+
+      // if (myRight - myLeft == 1) { return; }
+
+      let updateRight = this.constructor.forge()
+        .where(fieldRight, '>', myRight)
+        .save({
+          [fieldRight]: bookshelf.knex.raw(fieldRight + ' - ' + myWidth)
+        }, {
+          method: 'update',
+          require: false,
+        })
+        .then(q => {
+          //console.log('q', q);
+        })
+        .catch(e => {
+          console.log(e)
+        });
+
+      let updateLeft = this.constructor.forge()
+        .where(fieldLeft, '>', myRight)
+        .save({
+          [fieldLeft]: bookshelf.knex.raw(fieldLeft + ' - ' + myWidth)
+        }, {
+          method: 'update',
+          require: false,
+        })
+        .then(q => {
+          //console.log('q', q);
+        }).catch(e => {
+          console.log(e)
+        });
+
+
+      let deletePromise = this.query(qb => {
+          qb.whereRaw([fieldLeft, 'between', myLeft, 'and', myRight,].join(' '))
+        })
+        .destroy()
+        .then(() => {
+        }).catch(e => {
+          console.log('ERROR', e);
+        });
+
+      return Promise.all([deletePromise, updateRight, updateLeft]);
+    });
+
+    return Promise.resolve(fetchNode)
+  };
+
   bookshelf.Model = bookshelf.Model.extend({
 
     constructor: function() {
@@ -92,7 +159,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
       modelPrototype.constructor.apply(this, arguments)
 
       modelPrototype.on('creating', onCreating.bind(this));
-    }
+    },
+
+    removeFromTree: removeFromTree,
   })
 
 }

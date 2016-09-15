@@ -1,0 +1,21 @@
+{
+  "name": "bookshelf-hierarchy",
+  "version": "0.0.1",
+  "description": "Hierarchical Data plugin for Bookshelf",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "bookshelf": "^0.10.*",
+    "knex": "^0.12.*"
+  },
+  "optionalDependencies": {
+    "mysql": "^2.11.*"
+  },
+  "devDependencies": {
+    "babel-register": "^6.14.0"
+  }
+}

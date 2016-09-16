@@ -1,4 +1,5 @@
 require('babel-register');
+require('babel-polyfill');
 
 var config = require('./knexfile');
 var knex = require('knex');
@@ -50,4 +51,11 @@ Category.forge().fetchAll({
   console.log('Results for findChildren(6):\n', results.toJSON(), '\n');
 }).catch(err => {
   console.log(err);
+});
+
+// move FLASH under PORTABLE ELECTRONICS
+var Model = new Category({id: 8});
+Model.fetch().then(node => {
+  node.set('parent_id', 6);
+  node.save();
 });

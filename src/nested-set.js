@@ -15,12 +15,114 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   let modelPrototype = bookshelf.Model.prototype;
 
+  let setParent = async function(model, attrs, options) {
+    let sync = _sync.bind(this)
+    let unmarkInternalTree = _unmarkInternalTree.bind(this)
+    let parentId = model.changed[fieldParent];
+    let parent = await this.constructor.forge({id: parentId}).fetch();
+
+    let parentLeft = parent.get(fieldLeft);
+    let parentRight = parent.get(fieldRight);
+    let left = model.get(fieldLeft)
+    let right = model.get(fieldRight)
+
+    if (parentLeft > left && parentLeft < right) {
+      throw new Error(
+        'Cannot use node ' + parentId + ' for entity ' +
+        model.get(modelPrototype.idAttribute)
+      );
+    }
+
+    // values for moving to the left
+    let diff = right - left + 1;
+    let targetLeft = parentRight;
+    let targetRight = diff + parentRight - 1;
+    let min = parentRight;
+    let max = left - 1;
+
+    if (left < targetLeft) {
+      // moving to the right
+      targetLeft = parentRight - diff
+      targetRight = parentRight - 1
+      min = right + 1
+      max = parentRight - 1
+      diff *= -1;
+    }
+
+    let internalLeft, internalRight
+    if (right - left > 1) {
+      // correcting internal subtree
+      internalLeft = left + 1
+      internalRight = right + 1
+      await sync(targetLeft - left, '+', 'between ' + internalLeft + ' and ' + internalRight, true);
+    }
+
+    await sync(diff, '+', 'between ' + min + ' and ' + max);
+
+    if (right - left > 1) {
+      await unmarkInternalTree()
+    }
+
+    model
+      .set(fieldLeft, targetLeft)
+      .set(fieldRight, targetRight)
+      .save()
+      .then(res => {
+        //console.log('res', res)
+      })
+
+  }
+
+  let onSaving = async function(model, attrs, options) {
+    try {
+      if (options.method == 'update' && model.changed[fieldParent]) {
+        return await setParent.call(this, model, attrs, options);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   let onCreating = function(model, attrs, options) {
     var self = this;
     return bookshelf.transaction(transaction => {
       return _onCreating.call(self, transaction, model, attrs, options)
     });
   };
+
+  let _unmarkInternalTree = async function() {
+    let q = this.constructor.query()
+    await q
+      .update({
+        [fieldLeft]: bookshelf.knex.raw(fieldLeft + ' * -1'),
+        [fieldRight]: bookshelf.knex.raw(fieldLeft + ' * -1'),
+      })
+      .where(fieldLeft, '<', 0)
+  }
+
+  let _sync = async function(shift, dir, conditions, mark = false) {
+
+    let fields = [fieldLeft, fieldRight]
+    for (var i in fields) {
+      let field = fields[i]
+      mark = mark ? '*-1' : '';
+      let template = {
+        [field]: bookshelf.knex.raw(
+          '(' + field + ' ' + dir + ' ' + shift + ')' + mark
+        ),
+      }
+
+      await this.constructor.query()
+        .whereRaw(field + ' ' + conditions)
+        .update(template)
+        .then(res => {
+          //console.log(res);
+        })
+        .catch(err => {
+          console.log(err)
+        });
+    }
+  }
 
   let _onCreating = function(transaction, model, attrs, options) {
 
@@ -232,6 +334,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
   }
 
   modelPrototype.on('creating', onCreating);
+  modelPrototype.on('saving', onSaving);
   modelPrototype.on('fetching', onFetching);
   modelPrototype.on('fetching:collection', onFetching);
 

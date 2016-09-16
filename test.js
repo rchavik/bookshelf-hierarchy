@@ -15,9 +15,24 @@ var Category = ORM.Model.extend({
 ORM.transaction(t => {
   new Category().save({name: '3D TV', parent_id: 2}, {transacting: t})
   .then(category => {
-    new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
-      t.commit();
+
+    Category.forge().fetchAll({
+      findPath: {
+        for: category.get('id'),
+      },
+      transacting: t,
+    })
+    .then(results => {
+      console.log('Results for findPath(' + category.get('id') + '):\n', results.toJSON(), '\n');
+
+      new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
+        t.commit();
+      });
+
+    }).catch(err => {
+      console.log(err);
     });
+
   });
 }).then(() => {
   console.log('transaction commited');
@@ -32,7 +47,7 @@ Category.forge().fetchAll({
   }
 })
 .then(results => {
-  console.log(results.toJSON());
+  console.log('Results for findChildren(6):\n', results.toJSON(), '\n');
 }).catch(err => {
   console.log(err);
 });

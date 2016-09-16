@@ -6,16 +6,45 @@
 
 ## Example
 
+Example data from `test-data.sql`:
+
+```
+mysql> source show-tree.sql;
++----+------------------------+
+| id | name                   |
++----+------------------------+
+|  1 | ELECTRONICS            |
+|  2 |   TELEVISIONS          |
+|  3 |     TUBE               |
+|  4 |     LCD                |
+|  5 |     PLASMA             |
+|  6 |   PORTABLE ELECTRONICS |
+|  7 |     MP3 PLAYERS        |
+|  8 |       FLASH            |
+|  9 |     CD PLAYERS         |
+| 10 |     2 WAY RADIOS       |
++----+------------------------+
+```
+
 ### Insert and delete node
 
 ```js
+
+// load the plugin
 ORM.plugin(require('bookshelf-hierarchy').NestedSetModel);
+
+// wrap in transaction
 ORM.transaction(t => {
+
+  // save a new child node under TELEVISIONS
   new Category().save({name: '3D TV', parent_id: 2}, {transacting: t})
   .then(category => {
+
+    // removes FLASH from under MP3 PLAYERS
     new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
       t.commit();
     });
+
   });
 })
 ```
@@ -23,18 +52,32 @@ ORM.transaction(t => {
 ### findChildren
 
 ```js
+
+// get children of PORTABLE ELECTRONICS
 Category.forge().fetchAll({
   findChildren: {
     for: 6,
-    direct: false,
+    direct: false, // set true to retrieve direct nodes
   }
 })
 ```
 
+### findPath
+
+```js
+
+// get nodes leading to 3D TV (id 11)
+Category.forge().fetchAll({
+  findPath: {
+    for: 11
+  },
+  transacting: t,
+})
+
 # Todo
 
 - [x] transaction support
-- [ ] findPath
+- [x] findPath
 - [x] findChildren
 - [ ] findTreeList
 - [ ] formatTreeList

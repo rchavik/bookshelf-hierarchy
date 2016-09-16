@@ -178,6 +178,10 @@ module.exports = function nestedSetPlugin(bookshelf) {
     if (options.findChildren) {
       return onFindChildren.call(self, model, columns, options);
     }
+
+    if (options.findPath) {
+      return onFindPath.call(self, model, columns, options);
+    }
   }
 
   let onFindChildren = function(model, columns, options) {
@@ -200,6 +204,30 @@ module.exports = function nestedSetPlugin(bookshelf) {
       options.query
         .andWhere(fieldRight, '<', node.get(fieldRight))
         .andWhere(fieldLeft, '>', node.get(fieldLeft))
+    });
+
+  }
+
+  let onFindPath = function(model, columns, options) {
+
+    if (! options.findPath.for) {
+      throw new Error('The \'for\' key is required for \'findPath\'');
+    }
+
+    return this.constructor.forge({
+      [modelPrototype.idAttribute]: options.findPath.for,
+    }).fetch({
+      transacting: options.transacting,
+    }).then(node => {
+
+      if (!node) {
+        throw new Error('Cannot find with node id ' + options.findPath.for);
+      }
+
+      options.query
+        .andWhere(fieldLeft, '<=', node.get(fieldLeft))
+        .andWhere(fieldRight, '>=', node.get(fieldRight))
+        .orderBy(fieldLeft, 'asc');
     });
   }
 

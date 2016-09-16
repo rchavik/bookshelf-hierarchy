@@ -174,10 +174,13 @@ module.exports = function nestedSetPlugin(bookshelf) {
   };
 
   let onFetching = function(model, columns, options) {
-
-    if (! options.findChildren) {
-      return;
+    var self = this;
+    if (options.findChildren) {
+      return onFindChildren.call(self, model, columns, options);
     }
+  }
+
+  let onFindChildren = function(model, columns, options) {
 
     if (! options.findChildren.for) {
       throw new Error('The \'for\' key is required for \'findChildren\'');

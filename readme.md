@@ -73,6 +73,7 @@ Category.forge().fetchAll({
   },
   transacting: t,
 })
+```
 
 # Todo
 

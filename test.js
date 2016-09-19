@@ -1,9 +1,10 @@
 require('babel-register');
+require('babel-polyfill');
 
 var config = require('./knexfile');
 var knex = require('knex');
 var bookshelf= require('bookshelf');
-var bookshelfTree = require('./src');
+var bookshelfTree = require('./dist');
 var ORM = bookshelf(knex(config.development));
 
 ORM.plugin(bookshelfTree.NestedSetModel);
@@ -50,4 +51,9 @@ Category.forge().fetchAll({
   console.log('Results for findChildren(6):\n', results.toJSON(), '\n');
 }).catch(err => {
   console.log(err);
+});
+
+// move TELEVISIONS (2) under PORTABLE ELECTRONICS (6)
+new Category().setParent(2, 6).then(res => {
+  console.log(res);
 });

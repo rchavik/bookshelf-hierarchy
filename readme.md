@@ -29,7 +29,6 @@ mysql> source show-tree.sql;
 ### Insert and delete node
 
 ```js
-
 // load the plugin
 ORM.plugin(require('bookshelf-hierarchy').NestedSetModel);
 
@@ -52,7 +51,6 @@ ORM.transaction(t => {
 ### findChildren
 
 ```js
-
 // get children of PORTABLE ELECTRONICS
 Category.forge().fetchAll({
   findChildren: {
@@ -65,7 +63,6 @@ Category.forge().fetchAll({
 ### findPath
 
 ```js
-
 // get nodes leading to 3D TV (id 11)
 Category.forge().fetchAll({
   findPath: {
@@ -73,6 +70,15 @@ Category.forge().fetchAll({
   },
   transacting: t,
 })
+```
+
+### setParent
+
+```js
+// move TELEVISIONS (2) under PORTABLE ELECTRONICS (6)
+new Category().setParent(2, 6, {transacting: t}).then(() => {
+  console.log('node moved')
+});
 ```
 
 # Todo
@@ -83,6 +89,7 @@ Category.forge().fetchAll({
 - [ ] findTreeList
 - [ ] formatTreeList
 - [x] removeFromTree
+- [x] setParent
 - [ ] moveUp
 - [ ] moveDown
 - [ ] recover

@@ -15,13 +15,14 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   let modelPrototype = bookshelf.Model.prototype;
 
-  let moveLeft = function(node, newParent) {
+  let moveLeft = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
     let parentLeft = newParent.get(fieldLeft)
     let parentRight = newParent.get(fieldRight)
+    let tx = options && options.transacting ? options.transacting : null;
 
-    return this.constructor.query().update({
+    return this.constructor.transaction(tx).query().update({
 
       [fieldLeft]: bookshelf.knex.raw([
         fieldLeft, '+ case',
@@ -46,13 +47,14 @@ module.exports = function nestedSetPlugin(bookshelf) {
       .orWhereBetween(fieldRight, [parentRight, right]);
   }
 
-  let moveRight = function(node, newParent) {
+  let moveRight = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
     let parentLeft = newParent.get(fieldLeft)
     let parentRight = newParent.get(fieldRight)
+    let tx = options && options.transacting ? options.transacting : null;
 
-    return this.constructor.query().update({
+    return this.constructor.query().transacting(tx).update({
 
       [fieldLeft]: bookshelf.knex.raw([
         fieldLeft, '+ case',
@@ -77,24 +79,24 @@ module.exports = function nestedSetPlugin(bookshelf) {
       .orWhereBetween(fieldRight, [left, parentRight]);
   }
 
-  let _setParent = async function(nodeId, newParentId) {
+  let _setParent = async function(nodeId, newParentId, options) {
 
     let newParent = await this.constructor.forge({
       [modelPrototype.idAttribute]: newParentId,
-    }).fetch();
+    }).fetch(options);
 
     let node = await this.constructor.forge({
       [modelPrototype.idAttribute]: nodeId,
-    }).fetch();
+    }).fetch(options);
 
     const newParentRight = newParent.get(fieldRight);
     const originLeft = node.get(fieldLeft);
     const originRight = node.get(fieldRight);
 
     if (newParentRight < originLeft) {
-      return moveLeft.bind(this)(node, newParent);
+      return moveLeft.bind(this)(node, newParent, options);
     } else if (newParentRight > originRight) {
-      return moveRight.bind(this)(node, newParent);
+      return moveRight.bind(this)(node, newParent, options);
     } else {
       throw new Error('Cannot move a subtree to itself');
     }
@@ -103,9 +105,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   // http://falsinsoft.blogspot.com/2013/01/tree-in-sql-database-nested-set-model.html
   // https://groups.google.com/d/msg/microsoft.public.sqlserver.programming/IOZAEPlWIB8/qQOckfuP-4MJ
-  let setParent = function(nodeId, newParentId) {
+  let setParent = function(nodeId, newParentId, options) {
     try {
-      return _setParent.bind(this)(nodeId, newParentId);
+      return _setParent.bind(this)(nodeId, newParentId, options);
     } catch (e) {
       console.log(e);
     }

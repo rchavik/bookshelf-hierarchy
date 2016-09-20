@@ -22,7 +22,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
     let parentRight = newParent.get(fieldRight)
     let tx = options && options.transacting ? options.transacting : null;
 
-    return this.constructor.transaction(tx).query().update({
+    return this.constructor.query().transacting(tx).update({
 
       [fieldLeft]: bookshelf.knex.raw([
         fieldLeft, '+ case',

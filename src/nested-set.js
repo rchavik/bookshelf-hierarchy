@@ -18,7 +18,6 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let moveLeft = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
-    let parentLeft = newParent.get(fieldLeft)
     let parentRight = newParent.get(fieldRight)
     let tx = options && options.transacting ? options.transacting : null;
 
@@ -50,7 +49,6 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let moveRight = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
-    let parentLeft = newParent.get(fieldLeft)
     let parentRight = newParent.get(fieldRight)
     let tx = options && options.transacting ? options.transacting : null;
 

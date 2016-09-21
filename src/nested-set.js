@@ -18,7 +18,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let moveLeft = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
-    let parentRight = newParent.get(fieldRight)
+    let parentRight = newParent && newParent.get(fieldRight) || 1;
     let tx = options && options.transacting ? options.transacting : null;
 
     return this.constructor.query().transacting(tx).update({
@@ -49,7 +49,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let moveRight = function(node, newParent, options) {
     let left = node.get(fieldLeft)
     let right = node.get(fieldRight)
-    let parentRight = newParent.get(fieldRight)
+    let parentRight = newParent && newParent.get(fieldRight) || 1;
     let tx = options && options.transacting ? options.transacting : null;
 
     return this.constructor.query().transacting(tx).update({
@@ -87,9 +87,11 @@ module.exports = function nestedSetPlugin(bookshelf) {
       [modelPrototype.idAttribute]: nodeId,
     }).fetch(options);
 
-    const newParentRight = newParent.get(fieldRight);
+    const newParentRight = newParent && newParent.get(fieldRight) || 0;
     const originLeft = node.get(fieldLeft);
     const originRight = node.get(fieldRight);
+
+    await node.save({parent_id: newParentId});
 
     if (newParentRight < originLeft) {
       return moveLeft.bind(this)(node, newParent, options);
@@ -113,9 +115,14 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   let onCreating = function(model, attrs, options) {
     var self = this;
-    return bookshelf.transaction(transaction => {
+    let transaction = options.transacting;
+    if (transaction) {
       return _onCreating.call(self, transaction, model, attrs, options)
-    });
+    } else {
+      return bookshelf.transaction(transaction => {
+        return _onCreating.call(self, transaction, model, attrs, options)
+      });
+    }
   };
 
   let _onCreating = function(transaction, model, attrs, options) {
@@ -184,14 +191,30 @@ module.exports = function nestedSetPlugin(bookshelf) {
           transacting: transaction,
         })
         .then(parent => {
+          let promises = [];
           if (parent) {
             attrs[fieldLeft] = parent[fieldRight] + 1;
             attrs[fieldRight] = parent[fieldRight] + 2;
           } else {
-            attrs[fieldLeft] = 1;
-            attrs[fieldRight] = 2;
+            var self = this;
+            promises.push(
+              this.constructor.forge()
+              .orderBy(fieldRight, 'desc')
+              .fetch()
+              .then(edge => {
+                if (edge) {
+                  attrs[fieldLeft] = edge.get(fieldRight) + 1;
+                  attrs[fieldRight] = edge.get(fieldRight) + 2;
+                } else {
+                  attrs[fieldLeft] = 1;
+                  attrs[fieldRight] = 2;
+                }
+              })
+            );
           }
-          this.set(attrs);
+          return Promise.all(promises).then(() => {
+            this.set(attrs);
+          });
         });
     }
   };

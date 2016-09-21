@@ -30,16 +30,15 @@ async.series([
         .then(results => {
           console.log('Results for findPath(' + category.get('id') + '):')
           console.log(results.toJSON(), '\n');
-          model.removeFromTree({id: 8}, {transacting: t}).then(res => {
+          new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
             t.commit();
-            done();
           });
         });
       });
     }).then(() => {
-      console.log('transaction commited');
+      console.log('Added 3D TV and removed FLASH');
+      done();
     });
-
   },
 
   function(done) {
@@ -56,15 +55,50 @@ async.series([
   },
 
   function(done) {
-    // move TELEVISIONS (2) under PORTABLE ELECTRONICS (6)
     ORM.transaction(t => {
       new Category().setParent(2, 6, {transacting: t}).then(res => {
         t.commit();
-        done()
       });
     }).then(() => {
-      console.log('transaction commited');
+      console.log('Moved TELEVISIONS (2) under PORTABLE ELECTRONICS (6)');
+      done()
     });
-  }
+  },
+
+  function(done) {
+    ORM.transaction(t => {
+      new Category().save({name: 'COMPUTER'}, {transacting: t})
+        .then(res => {
+          new Category().save({name: 'PC', parent_id: res.get('id')}, {transacting: t}).then(res2 => {
+            t.commit();
+          })
+        });
+    }).then(() => {
+      console.log('Added a new root node: COMPUTER with one child: PC');
+      done();
+    });
+  },
+
+  function(done) {
+    ORM.transaction(t => {
+      new Category().setParent(12, 1, {transacting: t}).then(res => {
+        t.commit();
+      });
+    }).then(() => {
+      console.log('Moved COMPUTER (12) under ELECTRONICS (1)');
+      done();
+    });
+  },
+
+  function(done) {
+    ORM.transaction(t => {
+      new Category().setParent(12, null, {transacting: t}).then(res => {
+        t.commit();
+      });
+    }).then(() => {
+      console.log('Moved COMPUTER (12) as a new root');
+      done();
+    });
+  },
 
 ]);

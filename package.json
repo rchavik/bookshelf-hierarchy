@@ -1,6 +1,6 @@
 {
   "name": "bookshelf-hierarchy",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Hierarchical Data plugin for Bookshelf",
   "main": "index.js",
   "repository": {

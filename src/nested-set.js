@@ -200,7 +200,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
             promises.push(
               this.constructor.forge()
               .orderBy(fieldRight, 'desc')
-              .fetch()
+              .fetch({transacting: transaction})
               .then(edge => {
                 if (edge) {
                   attrs[fieldLeft] = edge.get(fieldRight) + 1;

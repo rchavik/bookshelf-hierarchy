@@ -127,10 +127,10 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
   let _onCreating = function(transaction, model, attrs, options) {
 
-    if (attrs[fieldParent]) {
+    if (model.changed[fieldParent]) {
 
       return this.constructor.forge({
-          [modelPrototype.idAttribute]: attrs[fieldParent]
+          [modelPrototype.idAttribute]: model.changed[fieldParent]
         })
         .fetch({
           transacting: transaction

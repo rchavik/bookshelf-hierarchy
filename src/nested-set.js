@@ -1,3 +1,5 @@
+'use strict';
+
 import merge from 'lodash/merge';
 
 module.exports = function nestedSetPlugin(bookshelf) {
@@ -83,19 +85,24 @@ module.exports = function nestedSetPlugin(bookshelf) {
       throw new Error('Model does not have NestedSetModel configuration');
     }
 
-    let newParent = await this.constructor.forge({
-      [modelPrototype.idAttribute]: newParentId,
-    }).fetch(options);
+    let condParent = newParentId ? {[modelPrototype.idAttribute]: newParentId} : {};
 
-    let node = await this.constructor.forge({
-      [modelPrototype.idAttribute]: nodeId,
-    }).fetch(options);
+    let newParent = await this.constructor.forge(applyScope(condParent)
+    ).fetch(options).catch(err => console.log('err parent', err));
+
+    let node = await this.constructor.forge(
+      applyScope({
+        [modelPrototype.idAttribute]: nodeId,
+      })
+    ).fetch(options);
 
     const newParentRight = newParent && newParent.get(fieldRight) || 0;
     const originLeft = node.get(fieldLeft);
     const originRight = node.get(fieldRight);
 
-    await node.save({parent_id: newParentId});
+    await node.save(applyScope({parent_id: newParentId}),
+      {transacting: options.transacting, patch: true}
+    );
 
     if (newParentRight < originLeft) {
       return moveLeft.bind(this)(node, newParent, options);
@@ -133,9 +140,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
     if (model.changed[fieldParent]) {
 
-      return this.constructor.forge({
+      return this.constructor.forge(applyScope({
           [modelPrototype.idAttribute]: model.changed[fieldParent]
-        })
+        }))
         .fetch({
           transacting: transaction
         })
@@ -143,8 +150,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
           if (parent) {
             let edge = parent.get(fieldRight);
 
-            let updateRight = this.constructor.forge()
-              .where(fieldRight, '>=', edge)
+            let updateRight = applyScope(this.constructor.forge()
+              .where(fieldRight, '>=', edge))
               .save({
                 [fieldRight]: bookshelf.knex.raw(fieldRight + ' + 2')
               }, {
@@ -158,8 +165,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
                 console.log(e)
               });
 
-            let updateLeft = this.constructor.forge()
-              .where(fieldLeft, '>', edge)
+            let updateLeft = applyScope(this.constructor.forge()
+              .where(fieldLeft, '>', edge))
               .save({
                 [fieldLeft]: bookshelf.knex.raw(fieldLeft + ' + 2')
               }, {
@@ -176,6 +183,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
             return Promise.all([updateRight, updateLeft]).then(q => {
                 attrs[fieldLeft] = edge;
                 attrs[fieldRight] = edge + 1;
+                applyScope(attrs);
                 this.set(attrs);
             });
           } else {
@@ -187,7 +195,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
       // new root node
       return this.query(qb => {
-        qb
+        applyScope(qb)
           .orderBy(fieldRight, 'desc')
           .limit(1);
         })
@@ -198,10 +206,12 @@ module.exports = function nestedSetPlugin(bookshelf) {
           if (parent) {
             attrs[fieldLeft] = parent[fieldRight] + 1;
             attrs[fieldRight] = parent[fieldRight] + 2;
+            applyScope(attrs)
             this.set(attrs);
           } else {
-            let query = this.constructor.forge()
-              .orderBy(fieldRight, 'desc')
+
+            let query = applyScope(this.constructor.forge()
+              .orderBy(fieldRight, 'desc'))
               .fetch({transacting: transaction});
 
             return query.asCallback((err, edge) => {
@@ -212,6 +222,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
                 attrs[fieldLeft] = 1;
                 attrs[fieldRight] = 2;
               }
+
+              applyScope(attrs)
               this.set(attrs);
               return this;
             });
@@ -355,9 +367,38 @@ module.exports = function nestedSetPlugin(bookshelf) {
     });
   }
 
+  let setScope = function(scope) {
+    if (!scope) {
+      throw new Error('Invalid scope');
+    }
+    this._treeScope = scope;
+    return this;
+  }
+
+  let applyScope = function(data) {
+    if (!this._treeScope) {
+      return data;
+    }
+
+    if (data && typeof data.where === 'function') {
+      return data.where(this._treeScope);
+    }
+
+    let fields = Object.getOwnPropertyNames(this._treeScope)
+    fields.forEach(fieldName => {
+      data[fieldName] = this._treeScope[fieldName]
+    })
+    return data;
+  }
+
   bookshelf.Model = bookshelf.Model.extend({
 
     constructor: function() {
+
+      this._treeScope = null;
+      if (arguments['1'] && arguments['1'].scope) {
+        setScope.call(this, arguments['1'].scope)
+      }
 
       modelPrototype.constructor.apply(this, arguments)
 
@@ -379,10 +420,15 @@ module.exports = function nestedSetPlugin(bookshelf) {
       this.on('creating', onCreating);
       this.on('fetching', onFetching);
       this.on('fetching:collection', onFetching);
+
+      applyScope = applyScope.bind(this);
+      setScope = setScope.bind(this);
     },
 
     removeFromTree: removeFromTree,
     setParent: setParent,
+    setScope: setScope,
+
   })
 
 }

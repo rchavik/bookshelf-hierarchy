@@ -12,6 +12,7 @@ ORM.plugin(bookshelfTree.NestedSetModel);
 
 var Category = ORM.Model.extend({
   tableName: 'nested_category',
+  nestedSet: true,
 });
 
 async.series([

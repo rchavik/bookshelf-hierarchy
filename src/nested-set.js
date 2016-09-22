@@ -1,6 +1,7 @@
+import merge from 'lodash/merge';
+
 module.exports = function nestedSetPlugin(bookshelf) {
 
-  // FIXME: This should be configurable
   let config = {
     fields: {
       left: 'lft',
@@ -9,9 +10,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
     }
   };
 
-  const fieldLeft = config.fields.left;
-  const fieldRight = config.fields.right;
-  const fieldParent = config.fields.parentId;
+  let fieldLeft;
+  let fieldRight;
+  let fieldParent;
 
   let modelPrototype = bookshelf.Model.prototype;
 
@@ -78,6 +79,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
   }
 
   let _setParent = async function(nodeId, newParentId, options) {
+    if (!this.nestedSet) {
+      throw new Error('Model does not have NestedSetModel configuration');
+    }
 
     let newParent = await this.constructor.forge({
       [modelPrototype.idAttribute]: newParentId,
@@ -220,6 +224,10 @@ module.exports = function nestedSetPlugin(bookshelf) {
   };
 
   let removeFromTree = function(model, options) {
+    if (!this.nestedSet) {
+      throw new Error('Model does not have NestedSetModel configuration');
+    }
+
     let transaction = options ? options.transacting : null;
 
     if (! model[modelPrototype.idAttribute]) {
@@ -350,16 +358,30 @@ module.exports = function nestedSetPlugin(bookshelf) {
     });
   }
 
-  modelPrototype.on('creating', onCreating);
-  modelPrototype.on('fetching', onFetching);
-  modelPrototype.on('fetching:collection', onFetching);
-
   bookshelf.Model = bookshelf.Model.extend({
 
     constructor: function() {
 
       modelPrototype.constructor.apply(this, arguments)
 
+      if (!this.nestedSet) {
+        return;
+      }
+
+      config = merge(config, this.nestedSet);
+      let fields = config.fields;
+
+      if (!fields.left || !fields.right || !fields.parentId) {
+        throw new Error('Missing/invalid nested set configuration');
+      }
+
+      fieldLeft = config.fields.left;
+      fieldRight = config.fields.right;
+      fieldParent = config.fields.parentId;
+
+      this.on('creating', onCreating);
+      this.on('fetching', onFetching);
+      this.on('fetching:collection', onFetching);
     },
 
     removeFromTree: removeFromTree,

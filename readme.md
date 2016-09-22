@@ -26,6 +26,27 @@ mysql> source show-tree.sql;
 +----+------------------------+
 ```
 
+### Model definition
+
+```js
+var Category = ORM.Model.extend({
+  tableName: 'nested_category',
+  nestedSet: true,
+});
+```
+
+You can configure the default configuration in the `nestedSet` key:
+
+```js
+{
+  fields: {
+    left: 'lft',
+    right: 'rgt',
+    parentId: 'parent_id',
+  }
+}
+```
+
 ### Insert and delete node
 
 ```js

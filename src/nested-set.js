@@ -90,13 +90,17 @@ module.exports = function nestedSetPlugin(bookshelf) {
     let condParent = newParentId ? {[modelPrototype.idAttribute]: newParentId} : {};
 
     let newParent = await this.constructor.forge(applyScope(condParent)
-    ).fetch(options).catch(err => console.log('err parent', err));
+    ).fetch(options).catch(err => { throw err});
+
+    if (newParentId && !newParent) {
+      throw new Error('Invalid parent');
+    }
 
     let node = await this.constructor.forge(
       applyScope({
         [modelPrototype.idAttribute]: nodeId,
       })
-    ).fetch(options);
+    ).fetch(options).catch(err => { throw err });
 
     if (!node) {
       throw new Error('Invalid node');

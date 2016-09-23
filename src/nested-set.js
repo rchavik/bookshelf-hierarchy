@@ -80,7 +80,9 @@ module.exports = function nestedSetPlugin(bookshelf) {
       .orWhereBetween(fieldRight, [left, parentRight]);
   }
 
-  let _setParent = async function(nodeId, newParentId, options) {
+  // http://falsinsoft.blogspot.com/2013/01/tree-in-sql-database-nested-set-model.html
+  // https://groups.google.com/d/msg/microsoft.public.sqlserver.programming/IOZAEPlWIB8/qQOckfuP-4MJ
+  let setParent = async function(nodeId, newParentId, options) {
     if (!this.nestedSet) {
       throw new Error('Model does not have NestedSetModel configuration');
     }
@@ -95,6 +97,10 @@ module.exports = function nestedSetPlugin(bookshelf) {
         [modelPrototype.idAttribute]: nodeId,
       })
     ).fetch(options);
+
+    if (!node) {
+      throw new Error('Invalid node');
+    }
 
     const newParentRight = newParent && newParent.get(fieldRight) || 0;
     const originLeft = node.get(fieldLeft);
@@ -112,16 +118,6 @@ module.exports = function nestedSetPlugin(bookshelf) {
       throw new Error('Cannot move a subtree to itself');
     }
 
-  }
-
-  // http://falsinsoft.blogspot.com/2013/01/tree-in-sql-database-nested-set-model.html
-  // https://groups.google.com/d/msg/microsoft.public.sqlserver.programming/IOZAEPlWIB8/qQOckfuP-4MJ
-  let setParent = function(nodeId, newParentId, options) {
-    try {
-      return _setParent.bind(this)(nodeId, newParentId, options);
-    } catch (e) {
-      console.log(e);
-    }
   }
 
   let onCreating = function(model, attrs, options) {

@@ -36,7 +36,7 @@ async.series([
             t.commit();
           });
         });
-      });
+      }).catch(err => { console.log(err) });
     }).then(() => {
       console.log('Added 3D TV and removed FLASH');
       done();
@@ -54,18 +54,18 @@ async.series([
     .then(results => {
       console.log('Results for findChildren(6):\n', results.toJSON(), '\n');
       done()
-    });
+    }).catch(err => { console.log(err) });
   },
 
   function(done) {
     ORM.transaction(t => {
       new Category().setParent(2, 6, {transacting: t}).then(res => {
         t.commit();
-      });
+      }).catch(err => { console.log(err) });
     }).then(() => {
       console.log('Moved TELEVISIONS (2) under PORTABLE ELECTRONICS (6)');
       done()
-    });
+    }).catch(err => { console.log(err) });
   },
 
   function(done) {
@@ -79,7 +79,7 @@ async.series([
     }).then(() => {
       console.log('Added a new root node: COMPUTER with one child: PC');
       done();
-    });
+    }).catch(err => { console.log(err) });
   },
 
   function(done) {
@@ -90,18 +90,18 @@ async.series([
     }).then(() => {
       console.log('Moved COMPUTER (12) under ELECTRONICS (1)');
       done();
-    });
+    }).catch(err => { console.log(err) });
   },
 
   function(done) {
     ORM.transaction(t => {
       new Category().setParent(12, null, {transacting: t}).then(res => {
         t.commit();
-      });
+      }).catch(err => console.log('FAILED', err));
     }).then(() => {
       console.log('Moved COMPUTER (12) as a new root');
       done();
-    }).catch(err => console.log('FAILED', err));
+    }).catch(err => console.log(err));
   },
 
   function(done) {
@@ -118,7 +118,7 @@ async.series([
     }).then(() => {
       console.log('Added node with new scope');
       done();
-    }).catch(err => console.log);
+    }).catch(err => { console.log(err) });
   },
 
 ]);

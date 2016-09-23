@@ -195,30 +195,27 @@ module.exports = function nestedSetPlugin(bookshelf) {
           transacting: transaction,
         })
         .then(parent => {
-          let promises = [];
           if (parent) {
             attrs[fieldLeft] = parent[fieldRight] + 1;
             attrs[fieldRight] = parent[fieldRight] + 2;
-          } else {
-            var self = this;
-            promises.push(
-              this.constructor.forge()
-              .orderBy(fieldRight, 'desc')
-              .fetch({transacting: transaction})
-              .then(edge => {
-                if (edge) {
-                  attrs[fieldLeft] = edge.get(fieldRight) + 1;
-                  attrs[fieldRight] = edge.get(fieldRight) + 2;
-                } else {
-                  attrs[fieldLeft] = 1;
-                  attrs[fieldRight] = 2;
-                }
-              })
-            );
-          }
-          return Promise.all(promises).then(() => {
             this.set(attrs);
-          });
+          } else {
+            let query = this.constructor.forge()
+              .orderBy(fieldRight, 'desc')
+              .fetch({transacting: transaction});
+
+            return query.asCallback((err, edge) => {
+              if (edge) {
+                attrs[fieldLeft] = edge.get(fieldRight) + 1;
+                attrs[fieldRight] = edge.get(fieldRight) + 2;
+              } else {
+                attrs[fieldLeft] = 1;
+                attrs[fieldRight] = 2;
+              }
+              this.set(attrs);
+              return this;
+            });
+          }
         });
     }
   };

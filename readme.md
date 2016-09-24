@@ -102,6 +102,18 @@ new Category().setParent(2, 6, {transacting: t}).then(() => {
 });
 ```
 
+### Scope
+
+```js
+// Configuring scope for a model instance with `section_id` = 2:
+new Category({}, {scope: {section_id: 2}}).fetchAll({
+})
+```
+
+## Running tests
+
+```mysql <dbname> < test-data.sql ; npm test``
+
 # Todo
 
 - [x] transaction support

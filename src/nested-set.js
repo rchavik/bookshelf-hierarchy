@@ -16,7 +16,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
   let fieldRight;
   let fieldParent;
 
-  let modelPrototype = bookshelf.Model.prototype;
+  let prototype = bookshelf.Model.prototype;
 
   let moveLeft = function(node, newParent, options) {
     let left = node.get(fieldLeft)
@@ -87,7 +87,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
       throw new Error('Model does not have NestedSetModel configuration');
     }
 
-    let condParent = newParentId ? {[modelPrototype.idAttribute]: newParentId} : {};
+    let condParent = newParentId ? {[prototype.idAttribute]: newParentId} : {};
 
     let newParent = await this.constructor.forge(applyScope(condParent)
     ).fetch(options).catch(err => { throw err});
@@ -98,7 +98,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
     let node = await this.constructor.forge(
       applyScope({
-        [modelPrototype.idAttribute]: nodeId,
+        [prototype.idAttribute]: nodeId,
       })
     ).fetch(options).catch(err => { throw err });
 
@@ -141,7 +141,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
     if (model.changed[fieldParent]) {
 
       return this.constructor.forge(applyScope({
-          [modelPrototype.idAttribute]: model.changed[fieldParent]
+          [prototype.idAttribute]: model.changed[fieldParent]
         }))
         .fetch({
           transacting: transaction
@@ -233,19 +233,19 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
     let transaction = options ? options.transacting : null;
 
-    if (! model[modelPrototype.idAttribute]) {
+    if (! model[prototype.idAttribute]) {
       return;
     }
 
     let fetchNode = this.constructor.forge({
-      [modelPrototype.idAttribute]: model[modelPrototype.idAttribute],
+      [prototype.idAttribute]: model[prototype.idAttribute],
     })
     .fetch({
       transacting: transaction
     })
     .then(node => {
       if (!node) {
-        throw new Error('Invalid node id:', model[modelPrototype.idAttribute]);
+        throw new Error('Invalid node id:', model[prototype.idAttribute]);
       }
 
       let myLeft = parseInt(node.get(fieldLeft), 10);
@@ -318,7 +318,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
     }
 
     return this.constructor.forge({
-      [modelPrototype.idAttribute]: options.findChildren.for,
+      [prototype.idAttribute]: options.findChildren.for,
     }).fetch({
       transacting: options.transacting,
     }).then(node => {
@@ -336,7 +336,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
     }
 
     return this.constructor.forge({
-      [modelPrototype.idAttribute]: options.findPath.for,
+      [prototype.idAttribute]: options.findPath.for,
     }).fetch({
       transacting: options.transacting,
     }).then(node => {
@@ -385,7 +385,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
         setScope.call(this, arguments['1'].scope)
       }
 
-      modelPrototype.constructor.apply(this, arguments)
+      prototype.constructor.apply(this, arguments)
 
       if (!this.nestedSet) {
         return;

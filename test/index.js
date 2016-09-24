@@ -1,12 +1,14 @@
-require('babel-register');
-require('babel-polyfill');
+import 'babel-polyfill';
 
 var async = require('async');
 var config = require('./knexfile');
 var knex = require('knex');
 var bookshelf= require('bookshelf');
-var bookshelfTree = require('./src');
+var bookshelfTree = require('../src');
 var ORM = bookshelf(knex(config.development));
+import chai from 'chai'
+
+const assert = chai.assert;
 
 ORM.plugin(bookshelfTree.NestedSetModel);
 
@@ -15,9 +17,10 @@ var Category = ORM.Model.extend({
   nestedSet: true,
 });
 
-async.series([
+describe('index.js', () => {
 
-  function(done) {
+
+  it('should add 3D TV and removed FLASH', (done) => {
     ORM.transaction(t => {
       let model = new Category({}, {scope: {section_id: 1}});
       model.save({name: '3D TV', parent_id: 2}, {transacting: t})
@@ -30,20 +33,19 @@ async.series([
           transacting: t,
         })
         .then(results => {
-          console.log('Results for findPath(' + category.get('id') + '):')
-          console.log(results.toJSON(), '\n');
+          let json = results.toJSON();
+          assert(json[2].name == '3D TV');
           new Category().removeFromTree({id: 8}, {transacting: t}).then(res => {
             t.commit();
           });
         });
       }).catch(err => { console.log(err) });
     }).then(() => {
-      console.log('Added 3D TV and removed FLASH');
       done();
     });
-  },
+  });
 
-  function(done) {
+  it('should return a list on children', (done) => {
     Category.forge().fetchAll({
       columns: ['nested_category.id', 'nested_category.name', 'nested_category.lft', 'nested_category.rgt'],
       findChildren: {
@@ -52,59 +54,66 @@ async.series([
       }
     })
     .then(results => {
-      console.log('Results for findChildren(6):\n', results.toJSON(), '\n');
+      let json = results.toJSON();
+      assert(json.length === 3);
       done()
     }).catch(err => { console.log(err) });
-  },
+  });
 
-  function(done) {
+  it('should move TELEVISIONS (2) under PORTABLE ELECTRONICS (6)', (done) => {
     ORM.transaction(t => {
       new Category().setParent(2, 6, {transacting: t}).then(res => {
+        assert(res > 0, 'more than one row is updated');
+        assert(res === 9, 'exactly nine rows has been updated');
         t.commit();
       }).catch(err => { console.log(err) });
     }).then(() => {
-      console.log('Moved TELEVISIONS (2) under PORTABLE ELECTRONICS (6)');
       done()
     }).catch(err => { console.log(err) });
-  },
+  });
 
-  function(done) {
+  it('should added a new root node: COMPUTER with one child: PC', (done) => {
     ORM.transaction(t => {
       new Category({}, {scope: {section_id: 1}}).save({name: 'COMPUTER'}, {transacting: t})
         .then(res => {
           new Category().save({name: 'PC', parent_id: res.get('id')}, {transacting: t}).then(res2 => {
+            let json = res2.toJSON();
+            assert(json.name == 'PC')
+            assert(json.section_id === 1)
             t.commit();
           })
         });
     }).then(() => {
-      console.log('Added a new root node: COMPUTER with one child: PC');
       done();
     }).catch(err => { console.log(err) });
-  },
+  });
 
-  function(done) {
+  it('should move COMPUTER (12) under ELECTRONICS (1)', (done) => {
     ORM.transaction(t => {
       new Category({}, {scope: {section_id: 1}}).setParent(12, 1, {transacting: t}).then(res => {
+        assert(res === 3, 'exactly 3 rows has been updated');
         t.commit();
       }).catch(err => console.log('setParent err', err));
     }).then(() => {
-      console.log('Moved COMPUTER (12) under ELECTRONICS (1)');
       done();
     }).catch(err => { console.log(err) });
-  },
+  });
 
-  function(done) {
+  it('should move COMPUTER (12) as a new root', (done) => {
     ORM.transaction(t => {
       new Category().setParent(12, null, {transacting: t}).then(res => {
-        t.commit();
+        assert(res === 3, 'exactly 3 rows has been updated');
+        new Category({id: 12}).fetch({transacting: t}).then(res => {
+          assert(res.get('parent_id') === null, 'parent is must be null');
+          t.commit();
+        });
       }).catch(err => console.log('FAILED', err));
     }).then(() => {
-      console.log('Moved COMPUTER (12) as a new root');
       done();
     }).catch(err => console.log(err));
-  },
+  });
 
-  function(done) {
+  it('should add a new node with different scope', (done) => {
     ORM.transaction(t => {
       new Category({}, {scope: {section_id: 2}})
         .save({name: 'Movies'}, {transacting: t})
@@ -112,13 +121,14 @@ async.series([
           new Category({}, {scope: {section_id: 2}})
             .save({name: 'Action', parent_id: res.get('id')}, {transacting: t})
             .then(res => {
-                t.commit()
+              let json = res.toJSON();
+              assert(json.section_id == 2, 'Scope field is filled correctly');
+              t.commit()
             })
         });
     }).then(() => {
-      console.log('Added node with new scope');
       done();
     }).catch(err => { console.log(err) });
-  },
+  });
 
-]);
+});

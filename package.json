@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "babel src --out-dir dist --source-maps",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --compilers js:babel-core/register"
   },
   "author": "Rachman Chavik",
   "homepage": "https://github.com/rchavik/bookshelf-hierarchy",
@@ -28,7 +28,9 @@
     "babel-plugin-transform-regenerator": "^6.14.0",
     "babel-polyfill": "^6.13.0",
     "babel-preset-es2015": "^6.14.0",
-    "babel-register": "^6.14.0"
+    "babel-register": "^6.14.0",
+    "chai": "^3.5.0",
+    "mocha": "^3.0.2"
   },
   "bugs": {
     "url": "https://github.com/rchavik/bookshelf-hierarchy/issues"

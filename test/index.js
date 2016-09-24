@@ -1,24 +1,21 @@
-import 'babel-polyfill';
-
-var async = require('async');
-var config = require('./knexfile');
-var knex = require('knex');
-var bookshelf= require('bookshelf');
-var bookshelfTree = require('../src');
-var ORM = bookshelf(knex(config.development));
 import chai from 'chai'
+import config from './knexfile';
+import 'babel-polyfill';
+import bookshelf from 'bookshelf';
+import bookshelfTree from '../src';
+import knex from 'knex';
 
 const assert = chai.assert;
+const ORM = bookshelf(knex(config.development));
 
 ORM.plugin(bookshelfTree.NestedSetModel);
 
-var Category = ORM.Model.extend({
+const Category = ORM.Model.extend({
   tableName: 'nested_category',
   nestedSet: true,
 });
 
 describe('index.js', () => {
-
 
   it('should add 3D TV and removed FLASH', (done) => {
     ORM.transaction(t => {

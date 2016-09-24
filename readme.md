@@ -112,7 +112,7 @@ new Category({}, {scope: {section_id: 2}}).fetchAll({
 
 ## Running tests
 
-```mysql <dbname> < test-data.sql ; npm test``
+`mysql <dbname> < test-data.sql ; npm test`
 
 # Todo
 

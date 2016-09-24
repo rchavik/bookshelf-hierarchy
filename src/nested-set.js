@@ -158,11 +158,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
                 method: 'update',
                 require: false,
                 transacting: transaction,
-              })
-              .then(q => {
-                //console.log('q', q);
               }).catch(e => {
-                console.log(e)
+                throw e;
               });
 
             let updateLeft = applyScope(this.constructor.forge()
@@ -173,11 +170,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
                 method: 'update',
                 require: false,
                 transacting: transaction,
-              })
-              .then(q => {
-                //console.log('q', q);
               }).catch(e => {
-                console.log(e)
+                throw e;
               });
 
             return Promise.all([updateRight, updateLeft]).then(q => {
@@ -268,12 +262,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
           method: 'update',
           require: false,
           transacting: transaction,
-        })
-        .then(q => {
-          //console.log('q', q);
-        })
-        .catch(e => {
-          console.log(e)
+        }).catch(e => {
+          throw e;
         });
 
       let updateLeft = this.constructor.forge()
@@ -284,11 +274,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
           method: 'update',
           require: false,
           transacting: transaction,
-        })
-        .then(q => {
-          //console.log('q', q);
         }).catch(e => {
-          console.log(e)
+          throw e;
         });
 
 
@@ -297,10 +284,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
         })
         .destroy({
           transacting: transaction,
-        })
-        .then(() => {
         }).catch(e => {
-          console.log('ERROR', e);
+          throw e;
         });
 
       return Promise.all([deletePromise, updateRight, updateLeft]);

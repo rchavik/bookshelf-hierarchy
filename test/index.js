@@ -9,6 +9,7 @@ const assert = chai.assert;
 const ORM = bookshelf(knex(config.development));
 
 ORM.plugin(bookshelfTree.NestedSetModel);
+ORM.plugin('pagination');
 
 const Category = ORM.Model.extend({
   tableName: 'nested_category',
@@ -126,6 +127,16 @@ describe('index.js', () => {
     }).then(() => {
       done();
     }).catch(err => { console.log(err) });
+  });
+
+  it('should move a node upwards', (done) => {
+    ORM.transaction(t => {
+      new Category().moveUp(10, 2, {transacting: t}).then(res => {
+        t.commit();
+      }).catch((err) => console.log(err));
+    }).then(() => {
+      done()
+    });
   });
 
 });

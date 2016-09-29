@@ -376,6 +376,110 @@ module.exports = function nestedSetPlugin(bookshelf) {
     return data;
   }
 
+  let moveUp = async function(nodeId, number = 1, options) {
+    let node = await applyScope(this.constructor.forge({id: nodeId}))
+      .fetch({transacting: options.transacting})
+      .catch(err => console.log(err))
+
+    let nodeParent = node && node.get(fieldParent)
+    let nodeLeft = node && node.get(fieldLeft)
+    let nodeRight = node && node.get(fieldRight)
+
+    let targetNode = null
+    let transaction = options.transacting || null
+
+    let targetNodePromise = await applyScope(this.constructor.forge())
+      .where({[fieldParent]: nodeParent})
+      .where(fieldRight, '<', nodeLeft)
+      .orderBy(fieldLeft, 'desc')
+      .fetchPage({
+        offset: number - 1,
+        limit: 1,
+      }, {
+        transacting: transaction
+      });
+
+    let fallbackPromise = await applyScope(this.constructor.forge())
+      .where({[fieldParent]: nodeParent})
+      .where(fieldRight, '<', nodeLeft)
+      .orderBy(fieldLeft, 'asc');
+
+    if (targetNodePromise.length > 0) {
+      targetNode = targetNodePromise.at(0);
+    } else {
+      fallbackPromise
+        .fetchPage({
+          offset: number - 1,
+          limit: 1,
+        }, {
+          transacting: transaction
+        });
+      if (fallbackPromise.length === 0) {
+        throw new Error('Invalid target node')
+      }
+      targetNode = fallbackPromise.at(0)
+    }
+
+    let targetLeft = targetNode.get(fieldLeft)
+    let edge = await this._getMax()
+
+    let leftBoundary = targetLeft;
+    let rightBoundary = nodeLeft + 1;
+
+    let nodeToEdge = edge - nodeLeft + 1;
+    let shift = nodeRight - nodeLeft + 1;
+    let nodeToHole = edge - leftBoundary + 1;
+
+    await this._sync(transaction, nodeToEdge, '+', 'between ' + nodeLeft + ' AND ' + nodeRight);
+    await this._sync(transaction, shift, '+', 'between ' + leftBoundary + ' AND ' + rightBoundary);
+    await this._sync(transaction, nodeToHole, '-', '> ' + edge);
+
+    return await node.save({
+      [fieldLeft]: targetLeft,
+      [fieldRight]: targetLeft + (nodeRight - nodeLeft)
+    }, {
+      transacting: transaction,
+      patch: true
+    }).catch(err => {
+      throw (err);
+    })
+  }
+
+  let _getMax = async function(transaction) {
+    let node = await applyScope(this.constructor.forge())
+      .orderBy(fieldRight, 'desc')
+      .fetch({transacting: transaction})
+
+    if (!node.get(fieldRight)) {
+      return 0;
+    }
+
+    return node.get(fieldRight);
+  }
+
+  let _sync = async function(transaction, shift, dir, conditions, mark = false) {
+
+    let fields = [fieldLeft, fieldRight]
+    for (var i in fields) {
+      let field = fields[i]
+      mark = mark ? '*-1' : '';
+      let template = {
+        [field]: bookshelf.knex.raw(
+          '(' + field + ' ' + dir + ' ' + shift + ')' + mark
+        ),
+      }
+
+      await applyScope(this.constructor.query()
+        .whereRaw(field + ' ' + conditions)
+        .update(template, {
+          transacting: transaction
+        }))
+        .catch(err => {
+          console.log(err)
+        });
+    }
+  }
+
   bookshelf.Model = bookshelf.Model.extend({
 
     constructor: function() {
@@ -408,11 +512,14 @@ module.exports = function nestedSetPlugin(bookshelf) {
 
       applyScope = applyScope.bind(this);
       setScope = setScope.bind(this);
+      this._getMax = _getMax.bind(this);
+      this._sync = _sync.bind(this);
     },
 
     removeFromTree: removeFromTree,
     setParent: setParent,
     setScope: setScope,
+    moveUp: moveUp,
 
   })
 

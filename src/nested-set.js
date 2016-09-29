@@ -399,7 +399,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
         transacting: transaction
       });
 
-    let fallbackPromise = await applyScope(this.constructor.forge())
+    let fallbackPromise = applyScope(this.constructor.forge())
       .where({[fieldParent]: nodeParent})
       .where(fieldRight, '<', nodeLeft)
       .orderBy(fieldLeft, 'asc');
@@ -407,9 +407,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
     if (targetNodePromise.length > 0) {
       targetNode = targetNodePromise.at(0);
     } else {
-      fallbackPromise
+      fallbackPromise = await fallbackPromise
         .fetchPage({
-          offset: number - 1,
           limit: 1,
         }, {
           transacting: transaction
@@ -468,7 +467,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
         transacting: transaction
       });
 
-    let fallbackPromise = await applyScope(this.constructor.forge())
+    let fallbackPromise = applyScope(this.constructor.forge())
       .where({[fieldParent]: nodeParent})
       .where(fieldLeft, '>', nodeRight)
       .orderBy(fieldLeft, 'desc');
@@ -476,9 +475,8 @@ module.exports = function nestedSetPlugin(bookshelf) {
     if (targetNodePromise.length > 0) {
       targetNode = targetNodePromise.at(0);
     } else {
-      fallbackPromise
+      fallbackPromise = await fallbackPromise
         .fetchPage({
-          offset: number - 1,
           limit: 1,
         }, {
           transacting: transaction

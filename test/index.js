@@ -131,7 +131,7 @@ describe('index.js', () => {
 
   it('should move a node upwards', (done) => {
     ORM.transaction(t => {
-      new Category().moveUp(10, 2, {transacting: t}).then(res => {
+      new Category({}, {scope: {section_id: 1}}).moveUp(10, 1, {transacting: t}).then(res => {
         t.commit();
       }).catch((err) => console.log(err));
     }).then(() => {

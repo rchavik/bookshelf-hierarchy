@@ -139,4 +139,14 @@ describe('index.js', () => {
     });
   });
 
+  it('should move a node downward', (done) => {
+    ORM.transaction(t => {
+      new Category().moveDown(3, 2, {transacting: t}).then(res => {
+        t.commit();
+      }).catch((err) => console.log(err));
+    }).then(() => {
+      done()
+    });
+  });
+
 });

@@ -445,6 +445,75 @@ module.exports = function nestedSetPlugin(bookshelf) {
     })
   }
 
+  let moveDown = async function(nodeId, number = 1, options) {
+    let node = await applyScope(this.constructor.forge({id: nodeId}))
+      .fetch({transacting: options.transacting})
+      .catch(err => console.log(err))
+
+    let nodeParent = node && node.get(fieldParent)
+    let nodeLeft = node && node.get(fieldLeft)
+    let nodeRight = node && node.get(fieldRight)
+
+    let targetNode = null
+    let transaction = options.transacting || null
+
+    let targetNodePromise = await applyScope(this.constructor.forge())
+      .where({[fieldParent]: nodeParent})
+      .where(fieldLeft, '>', nodeRight)
+      .orderBy(fieldLeft, 'asc')
+      .fetchPage({
+        offset: number - 1,
+        limit: 1,
+      }, {
+        transacting: transaction
+      });
+
+    let fallbackPromise = await applyScope(this.constructor.forge())
+      .where({[fieldParent]: nodeParent})
+      .where(fieldLeft, '>', nodeRight)
+      .orderBy(fieldLeft, 'desc');
+
+    if (targetNodePromise.length > 0) {
+      targetNode = targetNodePromise.at(0);
+    } else {
+      fallbackPromise
+        .fetchPage({
+          offset: number - 1,
+          limit: 1,
+        }, {
+          transacting: transaction
+        });
+      if (fallbackPromise.length === 0) {
+        throw new Error('Invalid target node')
+      }
+      targetNode = fallbackPromise.at(0)
+    }
+
+    let targetRight = targetNode.get(fieldRight)
+    let edge = await this._getMax()
+
+    let leftBoundary = nodeRight + 1;
+    let rightBoundary = targetRight;
+
+    let nodeToEdge = edge - nodeLeft + 1;
+    let shift = nodeRight - nodeLeft + 1;
+    let nodeToHole = edge - rightBoundary + shift;
+
+    await this._sync(transaction, nodeToEdge, '+', 'between ' + nodeLeft + ' AND ' + nodeRight);
+    await this._sync(transaction, shift, '-', 'between ' + leftBoundary + ' AND ' + rightBoundary);
+    await this._sync(transaction, nodeToHole, '-', '> ' + edge);
+
+    return await node.save({
+      [fieldLeft]: targetRight - (nodeRight - nodeLeft),
+      [fieldRight]: targetRight,
+    }, {
+      transacting: transaction,
+      patch: true
+    }).catch(err => {
+      throw (err);
+    })
+  }
+
   let _getMax = async function(transaction) {
     let node = await applyScope(this.constructor.forge())
       .orderBy(fieldRight, 'desc')
@@ -520,6 +589,7 @@ module.exports = function nestedSetPlugin(bookshelf) {
     setParent: setParent,
     setScope: setScope,
     moveUp: moveUp,
+    moveDown: moveDown,
 
   })
 
